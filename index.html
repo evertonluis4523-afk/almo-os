@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1d2127">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Almoços RM">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<title>Controle de Almoços — RM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1113; --surface:#16191c; --surface2:#1d2127; --line:#2a2f35;
+  --txt:#e8eaed; --muted:#9aa0a6; --accent:#aa221f; --accent2:#c93330;
+  --ok:#2e7d4f; --pagar:#b9892b; --neutral:#3a4047;
+  --r:12px;
+}
+html[data-theme=light]{
+  --bg:#ffffff; --surface:#ffffff; --surface2:#1d2127; --line:#dfe3e8;
+  --txt:#1d2127; --muted:#6b7178; --neutral:#aeb4bb;
+}
+html[data-theme=light] .cell.PEGOU{background:#dff3e6;color:#1b7a44}
+html[data-theme=light] .cell.PAGAR{background:#fbeecf;color:#9a6b13}
+html[data-theme=light] .cell.FALTA,html[data-theme=light] .cell.ATESTADO,
+html[data-theme=light] .cell.INSS,html[data-theme=light] .cell.CARCERE,
+html[data-theme=light] .cell.DEMISSAO,html[data-theme=light] .cell.ENCANTADO{
+  background:#eef0f2;color:#6b7178}
+html[data-theme=light] .cell.FERIADO{background:repeating-linear-gradient(45deg,#f3c9c8,#f3c9c8 6px,#fbe3e2 6px,#fbe3e2 12px);color:#aa221f;font-weight:800}
+html[data-theme=light] .namecell,html[data-theme=light] .calc{background:#fff}
+html[data-theme=light] thead .calc{background:#1d2127;color:#9aa0a6}
+html[data-theme=light] .calc.v{color:#1b7a44}html[data-theme=light] .calc.p{color:#9a6b13}
+html[data-theme=light] tfoot td{background:#f5f6f7;color:#1d2127}
+html[data-theme=light] tfoot td.calc{background:#f5f6f7}
+html[data-theme=light] .controls,html[data-theme=light] .brushbar,
+html[data-theme=light] .brush-hint,html[data-theme=light] .actions{background:#f7f8f9}
+html[data-theme=light] .field input,html[data-theme=light] .field select,
+html[data-theme=light] .chip,html[data-theme=light] .btn{background:#fff;color:#1d2127}
+html[data-theme=light] .chip.on{background:var(--accent);color:#fff}
+html[data-theme=light] .sheet,html[data-theme=light] .emp-row input,
+html[data-theme=light] .emp-row select{background:#fff}
+html[data-theme=light] .ico-btn{background:#2a2f35;color:#e8eaed}
+html[data-theme=light] thead th{color:#9aa0a6}
+html[data-theme=light] thead .colname{color:#9aa0a6;background:#1d2127}
+html[data-theme=light] .daycol .wd{color:#6b7178}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--txt);
+  font-family:'Archivo',system-ui,sans-serif;font-size:15px}
+.mono{font-family:'JetBrains Mono',monospace}
+button{font-family:inherit;cursor:pointer;border:none;color:inherit}
+
+/* APPBAR */
+.appbar{position:sticky;top:0;z-index:40;background:var(--surface2);color:#e8eaed;
+  border-bottom:1px solid var(--line);padding:env(safe-area-inset-top) 12px 0}
+.appbar-in{display:flex;align-items:center;gap:10px;height:54px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.3px}
+.brand .dot{width:10px;height:10px;border-radius:3px;background:var(--accent)}
+.brand small{font-weight:600;color:#9aa0a6;letter-spacing:1px;font-size:11px}
+.spacer{flex:1}
+.ico-btn{width:38px;height:38px;border-radius:10px;background:#23282e;
+  display:grid;place-items:center;font-size:18px;border:1px solid var(--line)}
+.ico-btn:active{background:var(--accent)}
+
+/* CONTROL ROW */
+.controls{display:flex;gap:8px;align-items:center;padding:10px 12px;flex-wrap:wrap;
+  background:var(--surface);border-bottom:1px solid var(--line)}
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.field input,.field select{background:#23282e;border:1px solid var(--line);color:var(--txt);
+  border-radius:9px;padding:8px 9px;font-family:'JetBrains Mono',monospace;font-size:14px}
+.field input[type=month]{min-width:140px}
+.field .vd{width:78px;text-align:right}
+
+/* BRUSH BAR */
+.brushbar{position:sticky;top:0;z-index:30;display:flex;gap:6px;overflow-x:auto;
+  padding:9px 12px;background:var(--surface);border-bottom:1px solid var(--line);
+  -webkit-overflow-scrolling:touch}
+.brushbar::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:8px 12px;border-radius:20px;background:#23282e;
+  border:1px solid var(--line);font-weight:700;font-size:13px;white-space:nowrap;
+  font-family:'JetBrains Mono',monospace}
+.chip.on{background:var(--accent);border-color:var(--accent2);box-shadow:0 0 0 2px rgba(170,34,31,.35)}
+.brush-hint{font-size:11px;color:var(--muted);padding:0 12px 8px;background:var(--surface);
+  border-bottom:1px solid var(--line)}
+
+/* GRID */
+.gridwrap{overflow:auto;-webkit-overflow-scrolling:touch;max-height:calc(100vh - 250px)}
+table.grid{border-collapse:separate;border-spacing:0;min-width:100%}
+table.grid th,table.grid td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);
+  padding:0;white-space:nowrap;font-size:13px}
+thead th{position:sticky;top:0;z-index:10;background:var(--surface2);color:var(--muted);
+  font-weight:700;font-size:11px;height:40px;padding:0 6px;text-align:center}
+.colname{position:sticky;left:0;z-index:20;background:var(--surface2);text-align:left;
+  min-width:148px;max-width:148px}
+thead .colname{z-index:25}
+.daycol{min-width:40px;font-family:'JetBrains Mono',monospace}
+.daycol.fer{color:var(--accent2)}
+.daycol .wd{display:block;font-size:9px;color:var(--neutral);font-weight:500}
+.namecell{position:sticky;left:0;z-index:15;background:var(--surface);
+  min-width:148px;max-width:148px;padding:7px 8px;text-align:left;line-height:1.15}
+.namecell .nm{font-weight:600;font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
+.namecell .tp{font-size:9px;color:var(--muted);letter-spacing:.5px}
+.namecell .tp.adm{color:var(--pagar)}
+.cell{display:flex;align-items:center;justify-content:center;width:100%;height:42px;
+  text-align:center;font-weight:700;
+  font-family:'JetBrains Mono',monospace;font-size:13px}
+.cell.PEGOU{background:rgba(46,125,79,.18);color:#7ee0a4}
+.cell.PAGAR{background:rgba(185,137,43,.16);color:#e8c168}
+.cell.FALTA,.cell.ATESTADO,.cell.INSS,.cell.CARCERE,.cell.DEMISSAO,.cell.ENCANTADO{
+  background:rgba(120,128,138,.10);color:var(--muted);font-size:9px}
+.cell.FERIADO{background:repeating-linear-gradient(45deg,rgba(170,34,31,.32),rgba(170,34,31,.32) 6px,rgba(170,34,31,.18) 6px,rgba(170,34,31,.18) 12px);color:#ff8a87;font-size:9px;font-weight:800;letter-spacing:.5px}
+.cell:active{outline:2px solid var(--accent);outline-offset:-2px}
+.calc{text-align:right;padding:0 8px;font-family:'JetBrains Mono',monospace;
+  background:var(--surface);min-width:78px}
+.calc.v{color:#7ee0a4}.calc.p{color:#e8c168}
+thead .calc{background:var(--surface2)}
+tfoot td{position:sticky;bottom:0;background:var(--surface2);font-weight:800;
+  font-family:'JetBrains Mono',monospace;height:42px;border-top:2px solid var(--accent)}
+tfoot .colname{z-index:22}
+
+/* FAB / ACTIONS */
+.actions{display:flex;gap:8px;padding:10px 12px;background:var(--surface);
+  border-top:1px solid var(--line);position:sticky;bottom:0;z-index:35}
+.btn{flex:1;padding:12px;border-radius:11px;font-weight:700;background:#23282e;
+  border:1px solid var(--line);font-size:14px}
+.btn.primary{background:var(--accent);border-color:var(--accent2)}
+.btn:active{transform:scale(.98)}
+
+/* MODAL */
+.modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);display:none;
+  align-items:flex-end;justify-content:center}
+.modal.open{display:flex}
+.sheet{background:var(--surface);width:100%;max-width:560px;border-radius:18px 18px 0 0;
+  border-top:1px solid var(--line);max-height:90vh;overflow:auto;
+  padding:14px 14px calc(20px + env(safe-area-inset-bottom))}
+.sheet h3{margin:6px 0 12px;font-size:16px;display:flex;align-items:center;gap:8px}
+.sheet h3 .dot{width:8px;height:8px;border-radius:2px;background:var(--accent)}
+.emp-row{display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.emp-row input{flex:1;background:#23282e;border:1px solid var(--line);color:var(--txt);
+  border-radius:8px;padding:9px}
+.emp-row select{background:#23282e;border:1px solid var(--line);color:var(--txt);
+  border-radius:8px;padding:9px;font-size:13px}
+.emp-row .del{width:36px;height:36px;border-radius:8px;background:#2a1d1d;color:var(--accent2);
+  font-size:16px;display:grid;place-items:center;flex:0 0 auto}
+.addbtn{margin-top:10px;width:100%;padding:11px;border-radius:10px;background:#23282e;
+  border:1px dashed var(--line);font-weight:700;color:var(--muted)}
+
+/* REPORT */
+.rep-tools{display:flex;gap:8px;margin-bottom:10px}
+.rep-tools .btn{padding:10px}
+table.rep{width:100%;border-collapse:collapse;font-size:12px}
+table.rep th,table.rep td{border:1px solid var(--line);padding:6px 7px;text-align:right}
+table.rep th{background:var(--surface2);color:var(--muted);font-size:10px;text-transform:uppercase}
+table.rep td.l,table.rep th.l{text-align:left}
+table.rep tr.tot td{background:var(--surface2);font-weight:800;border-top:2px solid var(--accent)}
+.repmono{font-family:'JetBrains Mono',monospace}
+.note{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.4}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent);
+  color:#fff;padding:11px 18px;border-radius:30px;font-weight:700;z-index:90;opacity:0;
+  transition:.25s;pointer-events:none;font-size:13px}
+.toast.show{opacity:1}
+
+/* SYNC STATUS */
+.sync-badge{display:flex;align-items:center;gap:5px;font-size:11px;font-family:'JetBrains Mono',monospace;
+  padding:4px 9px;border-radius:20px;background:#23282e;border:1px solid var(--line);
+  color:var(--muted);transition:.3s}
+.sync-badge .dot-fb{width:7px;height:7px;border-radius:50%;background:var(--neutral);flex:0 0 auto;transition:.3s}
+.sync-badge.ok .dot-fb{background:#2e7d4f;box-shadow:0 0 6px rgba(46,125,79,.6)}
+.sync-badge.err .dot-fb{background:var(--accent)}
+.sync-badge.syncing .dot-fb{background:#b9892b;animation:fbpulse .7s infinite alternate}
+@keyframes fbpulse{from{opacity:.4}to{opacity:1}}
+</style>
+</head>
+<body>
+
+<div class="appbar"><div class="appbar-in">
+  <div class="brand"><span class="dot"></span>ALMOÇOS<small>RM</small></div>
+  <div class="spacer"></div>
+  <button class="ico-btn" id="btnEmp" title="Funcionários">☰</button>
+  <button class="ico-btn" id="btnRep" title="Relatório">▤</button>
+  <button class="ico-btn" id="btnCfg" title="Configurações">⚙</button>
+</div></div>
+
+<div class="controls">
+  <div class="field"><label>Mês</label><input type="month" id="mes"></div>
+  <div class="field"><label>Valor/dia (R$)</label><input class="vd mono" id="valorDia" type="number" inputmode="decimal" step="0.5" value="20"></div>
+  <div class="field"><label>Dias úteis</label><input class="vd mono" id="diasUteis" type="number" readonly></div>
+  <div class="spacer"></div>
+  <div class="sync-badge" id="syncBadge"><span class="dot-fb"></span><span id="syncLbl">conectando…</span></div>
+  <button class="ico-btn" id="btnDays" title="Editar dias">📅</button>
+</div>
+
+<div class="brushbar" id="brushbar"></div>
+<div class="brush-hint">Toque na célula p/ pintar · toque no <b>nome</b> = linha inteira · toque no <b>dia</b> = coluna inteira</div>
+
+<div class="gridwrap"><table class="grid" id="grid"></table></div>
+
+<div class="actions">
+  <button class="btn" id="btnEmp2">Funcionários</button>
+  <button class="btn primary" id="btnRep2">Relatório p/ Contabilidade</button>
+</div>
+
+<!-- MODAL CONFIG -->
+<div class="modal" id="mCfg"><div class="sheet">
+  <h3><span class="dot"></span>Configurações</h3>
+  <div class="field" style="margin-bottom:14px">
+    <label>Valor do almoço por dia (R$)</label>
+    <input class="mono" id="cfgValor" type="number" inputmode="decimal" step="0.5"
+      style="background:#23282e;border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:11px;font-size:16px">
+  </div>
+  <button class="btn" id="cfgEmp" style="width:100%;margin-bottom:8px">👥 Gerenciar funcionários (<span id="cfgCount">0</span>)</button>
+  <button class="btn" id="cfgDays" style="width:100%;margin-bottom:8px">📅 Editar dias / feriados</button>
+  <button class="btn" id="cfgTheme" style="width:100%;margin-bottom:8px">🎨 Tema: <span id="cfgThemeLbl">Escuro</span></button>
+  <p class="note">Os funcionários valem para todos os meses: ao abrir um mês novo, a lista é herdada do mês anterior com as marcações zeradas. Adicione, remova ou troque OP/ADM na tela de funcionários.</p>
+  <button class="btn primary" id="cfgClose" style="margin-top:6px;width:100%">Concluir</button>
+</div></div>
+
+<!-- MODAL EMP -->
+<div class="modal" id="mEmp"><div class="sheet">
+  <h3><span class="dot"></span>Funcionários</h3>
+  <div id="empList"></div>
+  <button class="addbtn" id="empAdd">+ Adicionar funcionário</button>
+  <p class="note"><b>OP</b> (operacional): VALOR = nº de viandas pegas × valor/dia.<br>
+  <b>ADM</b> (administrativo): VALOR espelha o abono (como hoje).</p>
+  <button class="btn primary" id="empClose" style="margin-top:14px;width:100%">Concluir</button>
+</div></div>
+
+<!-- MODAL DAYS -->
+<div class="modal" id="mDays"><div class="sheet">
+  <h3><span class="dot"></span>Dias do mês</h3>
+  <p class="note">Marque <b>feriados</b> (saem da contagem) ou desmarque dias que não houve expediente. Padrão: seg–sex.</p>
+  <div id="dayList"></div>
+  <button class="btn primary" id="daysClose" style="margin-top:14px;width:100%">Concluir</button>
+</div></div>
+
+<!-- MODAL REPORT -->
+<div class="modal" id="mRep"><div class="sheet">
+  <h3><span class="dot"></span>Relatório — <span id="repMes" class="mono"></span></h3>
+  <div class="rep-tools">
+    <button class="btn" id="repCopy">Copiar tabela</button>
+    <button class="btn" id="repCsv">Exportar CSV</button>
+    <button class="btn" id="repPrint">Imprimir</button>
+  </div>
+  <div id="repBody"></div>
+  <button class="btn primary" id="repClose" style="margin-top:14px;width:100%">Fechar</button>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* ============ MODELO ============ */
+const MARKS=[
+ {k:'PEGOU',  s:'1',       lbl:'1 (pegou)'},
+ {k:'PAGAR',  s:'PAGAR',   lbl:'PAGAR'},
+ {k:'FALTA',  s:'FALTA',   lbl:'Falta'},
+ {k:'ATESTADO',s:'ATEST',  lbl:'Atestado'},
+ {k:'INSS',   s:'INSS',    lbl:'Licença INSS'},
+ {k:'CARCERE',s:'CÁRC',    lbl:'Cárcere'},
+ {k:'DEMISSAO',s:'DEMIS',  lbl:'Demissão'},
+ {k:'ENCANTADO',s:'ENC',   lbl:'Encantado'},
+ {k:'FERIADO',s:'FER',     lbl:'Feriado'},
+ {k:'',       s:'·',       lbl:'Limpar'}
+];
+const MK=Object.fromEntries(MARKS.map(m=>[m.k,m]));
+
+/* Lista inicial — funcionários jun/2026 (ADM = recebe em dinheiro / VALOR espelha abono) */
+const SEED=[
+ ['SEBASTIÃO DA SILVA','OP'],['ADRIANO ROLOFF','OP'],['ARTHUR BERGMANN HORN','OP'],
+ ['BRUNA EDUARDA STORCK','OP'],['DOUGLAS HENRIQUE ROLOFF','OP'],['DIEGO KEILL','OP'],
+ ['GUILHERME BECKER','OP'],['EDUARDO JOÃO ALMEIDA','OP'],['EVERTON LUIS MACHADO','ADM'],
+ ['ERALDO RIBEIRO MARTINS','OP'],['RUDIMAR NUNES JUNIOR','OP'],['RUDI','OP'],
+ ['VALDIR STHOER','OP'],['TANAEL EDUARDO DA SILVA','OP'],['VITOR TELLES','ADM'],
+ ['BIANCA THAÍS OLIVEIRA','OP'],['ÉRICO HUVE','OP'],['MARCELO NOGUEIRA DE MELLO','OP'],
+ ['MARCOS CAUA NUNES','OP'],['JOÃO WESLEY DA SILVA RODRIGUES','OP'],['MAURO SIEG HENRICHSEN','OP'],
+ ['DAVI HENRIQUE SCHAEFFER','OP'],['GILBERTO ESTER','ADM'],['ROBERT DA SILVA MARTINS','OP'],
+ ['JONAS EZEQUIEL DA SILVA','OP'],['FRANCISCO JANDERSON MUNIZ TOME','OP'],
+ ['ERVINO MACHADO DA ROSA (BENTO)','OP'],['LÉO BRANDÃO DE SOUZA','OP'],['ARLEI LUIS WENTZ','OP'],
+ ['ANTÔNIO ALVES NETO','OP'],['ALDOMIRO DA ROSA','OP'],['MATHIAS VICENTE CORTES SCHIMTZ','OP'],
+ ['DIEGO AGUIR SILVA DA ROSA','OP'],['ABRAÃO HAMED DA SILVA','OP']
+];
+
+let DB=load();
+let brush='PEGOU';
+const $=s=>document.querySelector(s);
+const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e};
+const money=v=>v===0?'-':v.toLocaleString('pt-BR',{minimumFractionDigits:0});
+
+function load(){
+  try{const d=JSON.parse(localStorage.getItem('rm_almocos'));if(d)return d;}catch(e){}
+  return {valorDia:20, mesAtual:isoMonth(new Date()), meses:{}};
+}
+function save(){localStorage.setItem('rm_almocos',JSON.stringify(DB)); fbSync();}
+function isoMonth(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+
+function ensureMonth(mk){
+  if(DB.meses[mk]) return DB.meses[mk];
+  const [y,m]=mk.split('-').map(Number);
+  const dias={}; const last=new Date(y,m,0).getDate();
+  for(let d=1;d<=last;d++){
+    const dt=new Date(y,m-1,d); const wd=dt.getDay();
+    if(wd>=1&&wd<=5) dias[mk+'-'+String(d).padStart(2,'0')]={on:true,fer:false};
+  }
+  // herda funcionários do mês anterior; se for o 1º mês, usa a lista inicial
+  let funcs=[];
+  const prev=Object.keys(DB.meses).sort().pop();
+  if(prev&&DB.meses[prev]) funcs=DB.meses[prev].funcionarios.map(f=>({id:f.id,nome:f.nome,tipo:f.tipo,marc:{}}));
+  else funcs=SEED.map((s,i)=>({id:'f'+i,nome:s[0],tipo:s[1],marc:{}}));
+  DB.meses[mk]={dias,funcionarios:funcs};
+  return DB.meses[mk];
+}
+function curMonth(){return ensureMonth(DB.mesAtual)}
+function activeDays(){const M=curMonth();return Object.keys(M.dias).filter(d=>M.dias[d].on).sort()}
+function diasUteis(){const M=curMonth();return activeDays().filter(d=>!M.dias[d].fer).length}
+
+/* ============ CÁLCULO ============ */
+function calc(f){
+  const M=curMonth(), v=Number(DB.valorDia)||0;
+  let pegou=0,pagar=0;
+  activeDays().forEach(d=>{
+    if(M.dias[d].fer) return;
+    const m=f.marc[d];
+    if(m==='PEGOU')pegou++; else if(m==='PAGAR')pagar++;
+  });
+  const abono=pagar*v;
+  const valor=(f.tipo==='ADM')?abono:pegou*v; // ADM espelha o abono (como hoje)
+  return {pegou,pagar,valor,abono,aPagar:abono};
+}
+
+/* ============ RENDER GRID ============ */
+function render(){
+  $('#mes').value=DB.mesAtual;
+  $('#valorDia').value=DB.valorDia;
+  $('#diasUteis').value=diasUteis();
+  renderBrush();
+  const M=curMonth(), days=activeDays();
+  const t=$('#grid'); t.innerHTML='';
+  // head
+  const thead=el('thead'),htr=el('tr');
+  htr.appendChild(thHead('Funcionário','colname'));
+  days.forEach(d=>{
+    const [,,dd]=d.split('-'); const dt=new Date(d+'T00:00:00');
+    const wdName=['DOM','SEG','TER','QUA','QUI','SEX','SÁB'][dt.getDay()];
+    const th=el('th','daycol'+(M.dias[d].fer?' fer':''));
+    th.innerHTML=dd+'<span class="wd">'+wdName+'</span>';
+    th.onclick=()=>paintCol(d);
+    htr.appendChild(th);
+  });
+  htr.appendChild(thHead('VALOR','calc'));
+  htr.appendChild(thHead('A PAGAR','calc'));
+  thead.appendChild(htr); t.appendChild(thead);
+  // body
+  const tb=el('tbody');
+  M.funcionarios.forEach((f,i)=>{
+    const tr=el('tr');
+    const nc=el('td','namecell');
+    nc.innerHTML='<div class="nm">'+(i+1)+'. '+esc(f.nome||'—')+'</div>'+
+      '<div class="tp'+(f.tipo==='ADM'?' adm':'')+'">'+(f.tipo==='ADM'?'ADMINISTRATIVO':'OPERACIONAL')+'</div>';
+    nc.onclick=()=>paintRow(f);
+    tr.appendChild(nc);
+    days.forEach(d=>{
+      const fer=M.dias[d].fer;
+      const m=fer?'FERIADO':(f.marc[d]||'');
+      const td=el('td');
+      const c=el('div','cell '+m);
+      c.textContent=m?MK[m].s:'';
+      if(fer){
+        c.onclick=()=>toast('Dia marcado como feriado');
+      } else {
+        c.onclick=()=>{f.marc[d]=(brush||''); save(); c.className='cell '+(f.marc[d]); c.textContent=f.marc[d]?MK[f.marc[d]].s:''; updateRowCalc(f,tr);};
+      }
+      td.appendChild(c); tr.appendChild(td);
+    });
+    const r=calc(f);
+    const vv=el('td','calc v'); vv.textContent=money(r.valor);
+    const pp=el('td','calc p'); pp.textContent=money(r.aPagar);
+    tr.appendChild(vv); tr.appendChild(pp);
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+  // foot
+  const tf=el('tfoot'),ftr=el('tr');
+  const fc=el('td','colname'); fc.textContent='TOTAIS'; ftr.appendChild(fc);
+  days.forEach(d=>{
+    const td=el('td'); td.style.textAlign='center'; td.style.color='var(--muted)';
+    let n=0; M.funcionarios.forEach(f=>{if(f.marc[d]==='PEGOU')n++});
+    td.textContent=n||''; ftr.appendChild(td);
+  });
+  let tV=0,tP=0; M.funcionarios.forEach(f=>{const r=calc(f);tV+=r.valor;tP+=r.aPagar});
+  const tv=el('td','calc'); tv.textContent='R$ '+money(tV);
+  const tp=el('td','calc'); tp.textContent='R$ '+money(tP);
+  ftr.appendChild(tv); ftr.appendChild(tp);
+  tf.appendChild(ftr); t.appendChild(tf);
+}
+function thHead(txt,cls){const th=el('th',cls);th.textContent=txt;return th}
+function updateRowCalc(f,tr){
+  const r=calc(f); const tds=tr.querySelectorAll('td.calc');
+  tds[0].textContent=money(r.valor); tds[1].textContent=money(r.aPagar);
+  // atualiza totais sem re-render completo
+  refreshFoot();
+}
+function refreshFoot(){
+  const M=curMonth(); let tV=0,tP=0;
+  M.funcionarios.forEach(f=>{const r=calc(f);tV+=r.valor;tP+=r.aPagar});
+  const ft=$('#grid tfoot tr').querySelectorAll('td.calc');
+  if(ft.length){ft[0].textContent='R$ '+money(tV);ft[1].textContent='R$ '+money(tP);}
+  $('#diasUteis').value=diasUteis();
+}
+
+function renderBrush(){
+  const bb=$('#brushbar'); bb.innerHTML='';
+  MARKS.forEach(m=>{
+    const c=el('button','chip'+(brush===m.k?' on':''));
+    c.textContent=m.lbl;
+    c.onclick=()=>{brush=m.k; renderBrush();};
+    bb.appendChild(c);
+  });
+}
+function paintRow(f){
+  const M=curMonth();
+  activeDays().forEach(d=>{ if(!(M.dias[d].fer)) f.marc[d]=brush; });
+  save(); render(); toast('Linha pintada: '+(MK[brush].lbl));
+}
+function paintCol(d){
+  const M=curMonth();
+  if(brush==='FERIADO'){ M.dias[d].fer=true; }
+  else { M.funcionarios.forEach(f=>f.marc[d]=brush); if(M.dias[d].fer&&brush!=='')M.dias[d].fer=false; }
+  save(); render(); toast('Coluna '+d.slice(-2)+': '+MK[brush].lbl);
+}
+
+/* ============ FUNCIONÁRIOS ============ */
+function openEmp(){
+  const M=curMonth(), list=$('#empList'); list.innerHTML='';
+  M.funcionarios.forEach((f)=>{
+    const row=el('div','emp-row');
+    const inp=el('input'); inp.value=f.nome; inp.placeholder='Nome';
+    inp.oninput=e=>{f.nome=e.target.value};
+    const sel=el('select');
+    sel.innerHTML='<option value="OP">OP</option><option value="ADM">ADM</option>';
+    sel.value=f.tipo; sel.onchange=e=>{f.tipo=e.target.value};
+    const del=el('button','del'); del.textContent='×';
+    del.onclick=()=>{if(confirm('Remover '+(f.nome||'funcionário')+'?')){M.funcionarios=M.funcionarios.filter(x=>x!==f);save();openEmp();}};
+    row.append(inp,sel,del); list.appendChild(row);
+  });
+  openModal('mEmp');
+}
+$('#empAdd').onclick=()=>{const M=curMonth();M.funcionarios.push({id:'f'+Date.now(),nome:'',tipo:'OP',marc:{}});save();openEmp()};
+$('#empClose').onclick=()=>{save();closeModal('mEmp');render()};
+
+/* ============ DIAS ============ */
+function openDays(){
+  const M=curMonth(), list=$('#dayList'); list.innerHTML='';
+  Object.keys(M.dias).sort().forEach(d=>{
+    const dt=new Date(d+'T00:00:00');
+    const wd=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][dt.getDay()];
+    const row=el('div','emp-row');
+    const lab=el('div'); lab.style.flex='1'; lab.className='repmono';
+    lab.innerHTML=d.slice(-2)+'/'+d.slice(5,7)+' <span style="color:var(--muted)">'+wd+'</span>';
+    const onWrap=el('label'); onWrap.style.cssText='display:flex;gap:5px;align-items:center;font-size:12px;color:var(--muted)';
+    const onCk=el('input'); onCk.type='checkbox'; onCk.checked=M.dias[d].on;
+    onCk.onchange=e=>{M.dias[d].on=e.target.checked;save()};
+    onWrap.append(onCk,document.createTextNode('Expediente'));
+    const ferWrap=el('label'); ferWrap.style.cssText='display:flex;gap:5px;align-items:center;font-size:12px;color:var(--accent2)';
+    const ferCk=el('input'); ferCk.type='checkbox'; ferCk.checked=M.dias[d].fer;
+    ferCk.onchange=e=>{M.dias[d].fer=e.target.checked;save()};
+    ferWrap.append(ferCk,document.createTextNode('Feriado'));
+    row.append(lab,onWrap,ferWrap); list.appendChild(row);
+  });
+  openModal('mDays');
+}
+$('#daysClose').onclick=()=>{save();closeModal('mDays');render()};
+
+/* ============ RELATÓRIO ============ */
+function buildRows(){
+  const M=curMonth(), v=Number(DB.valorDia)||0;
+  return M.funcionarios.map((f,i)=>{const r=calc(f);
+    const obs=countObs(f);
+    return {n:i+1,nome:f.nome||'—',tipo:f.tipo,pegou:r.pegou,valor:r.valor,pagar:r.pagar,aPagar:r.aPagar,obs};
+  });
+}
+function countObs(f){
+  const M=curMonth(); const c={};
+  activeDays().forEach(d=>{const m=f.marc[d];if(m&&m!=='PEGOU'&&m!=='PAGAR'&&m!=='FERIADO')c[m]=(c[m]||0)+1});
+  return Object.entries(c).map(([k,n])=>MK[k].lbl+'×'+n).join(', ');
+}
+function openRep(){
+  $('#repMes').textContent=fmtMes(DB.mesAtual)+' · '+diasUteis()+' dias úteis';
+  const rows=buildRows();
+  let tV=0,tP=0;
+  let h='<table class="rep"><thead><tr>'+
+    '<th class="l">#</th><th class="l">Funcionário</th><th>Viandas</th><th>Valor (R$)</th>'+
+    '<th>A abonar</th><th>A pagar (R$)</th><th class="l">Obs.</th></tr></thead><tbody>';
+  rows.forEach(r=>{tV+=r.valor;tP+=r.aPagar;
+    h+='<tr><td class="l">'+r.n+'</td><td class="l">'+esc(r.nome)+' <span style="color:var(--muted);font-size:9px">'+r.tipo+'</span></td>'+
+       '<td class="repmono">'+r.pegou+'</td><td class="repmono">'+money(r.valor)+'</td>'+
+       '<td class="repmono">'+r.pagar+'</td><td class="repmono">'+money(r.aPagar)+'</td>'+
+       '<td class="l" style="font-size:10px;color:var(--muted)">'+esc(r.obs)+'</td></tr>';
+  });
+  h+='<tr class="tot"><td class="l" colspan="3">TOTAIS</td><td class="repmono">R$ '+money(tV)+'</td>'+
+     '<td></td><td class="repmono">R$ '+money(tP)+'</td><td></td></tr>';
+  h+='</tbody></table>';
+  $('#repBody').innerHTML=h;
+  openModal('mRep');
+}
+function repText(){
+  const rows=buildRows(); let tV=0,tP=0;
+  let s='CONTROLE DE ALMOÇOS — '+fmtMes(DB.mesAtual)+' ('+diasUteis()+' dias úteis)\n';
+  s+='Valor/dia: R$ '+DB.valorDia+'\n\n';
+  s+='#\tFuncionário\tTipo\tViandas\tValor\tA abonar\tA pagar\tObs.\n';
+  rows.forEach(r=>{tV+=r.valor;tP+=r.aPagar;
+    s+=r.n+'\t'+r.nome+'\t'+r.tipo+'\t'+r.pegou+'\t'+money(r.valor)+'\t'+r.pagar+'\t'+money(r.aPagar)+'\t'+r.obs+'\n';});
+  s+='\nTOTAL VALOR (viandas): R$ '+money(tV)+'\n';
+  s+='TOTAL A PAGAR (abono): R$ '+money(tP)+'\n';
+  return s;
+}
+$('#repCopy').onclick=()=>{navigator.clipboard.writeText(repText()).then(()=>toast('Tabela copiada'))};
+$('#repCsv').onclick=()=>{
+  const rows=buildRows(); let tV=0,tP=0;
+  let c='#;Funcionário;Tipo;Viandas;Valor;A abonar;A pagar;Obs.\n';
+  rows.forEach(r=>{tV+=r.valor;tP+=r.aPagar;
+    c+=[r.n,r.nome,r.tipo,r.pegou,r.valor,r.pagar,r.aPagar,r.obs].join(';')+'\n';});
+  c+=';;;;'+tV+';;'+tP+';\n';
+  const blob=new Blob(['\ufeff'+c],{type:'text/csv;charset=utf-8'});
+  const a=el('a'); a.href=URL.createObjectURL(blob);
+  a.download='almocos_'+DB.mesAtual+'.csv'; a.click(); toast('CSV gerado');
+};
+$('#repPrint').onclick=()=>{const w=window.open('','_print');
+  w.document.write('<title>Almoços '+DB.mesAtual+'</title><pre style="font:13px monospace">'+esc(repText())+'</pre>');
+  w.document.close(); w.print();};
+$('#repClose').onclick=()=>closeModal('mRep');
+
+/* ============ UI HELPERS ============ */
+function openModal(id){$('#'+id).classList.add('open')}
+function closeModal(id){$('#'+id).classList.remove('open')}
+document.querySelectorAll('.modal').forEach(m=>m.onclick=e=>{if(e.target===m)m.classList.remove('open')});
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function fmtMes(mk){const[,y,m]=[0,...mk.split('-')];const n=['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];return n[Number(m)]+'/'+y}
+let tmo; function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(tmo);tmo=setTimeout(()=>e.classList.remove('show'),1600)}
+
+$('#mes').onchange=e=>{DB.mesAtual=e.target.value;ensureMonth(DB.mesAtual);save();render()};
+$('#valorDia').onchange=e=>{DB.valorDia=Number(e.target.value)||0;save();render()};
+$('#btnEmp').onclick=openEmp; $('#btnEmp2').onclick=openEmp;
+$('#btnRep').onclick=openRep; $('#btnRep2').onclick=openRep;
+$('#btnDays').onclick=openDays;
+
+/* Configurações */
+function openCfg(){
+  $('#cfgValor').value=DB.valorDia;
+  $('#cfgCount').textContent=curMonth().funcionarios.length;
+  openModal('mCfg');
+}
+$('#btnCfg').onclick=openCfg;
+$('#cfgValor').onchange=e=>{DB.valorDia=Number(e.target.value)||0;save();render()};
+$('#cfgEmp').onclick=()=>{closeModal('mCfg');openEmp()};
+$('#cfgDays').onclick=()=>{closeModal('mCfg');openDays()};
+$('#cfgClose').onclick=()=>{closeModal('mCfg');render()};
+
+function applyTheme(){
+  const light=DB.tema==='light';
+  document.documentElement.setAttribute('data-theme',light?'light':'dark');
+  const lbl=$('#cfgThemeLbl'); if(lbl) lbl.textContent=light?'Claro':'Escuro';
+  document.querySelector('meta[name=theme-color]').setAttribute('content','#1d2127');
+}
+$('#cfgTheme').onclick=()=>{DB.tema=(DB.tema==='light')?'dark':'light';save();applyTheme()};
+
+/* ============ FIREBASE — sincroniza entre os computadores ============ */
+const FB_CONFIG={
+  apiKey:            "AIzaSyBDOR9f748UNoGP5c72Y-vdmDBcffM8tMI",
+  authDomain:        "rm-contas.firebaseapp.com",
+  databaseURL:       "https://rm-contas-default-rtdb.firebaseio.com",
+  projectId:         "rm-contas",
+  storageBucket:     "rm-contas.firebasestorage.app",
+  messagingSenderId: "414740463069",
+  appId:             "1:414740463069:web:f8035314dcfbf962c80a34",
+  measurementId:     "G-M496PJCSSX"
+};
+const FB_NODE='almocos';
+let fbRef=null, fbReady=false, fbSelfWrite=false;
+
+function setSyncUI(state, label){
+  const badge=document.getElementById('syncBadge');
+  const lbl=document.getElementById('syncLbl');
+  if(!badge) return;
+  badge.className='sync-badge'+(state?' '+state:'');
+  lbl.textContent=label;
+}
+
+function fbInit(){
+  if(!window.firebase) { setSyncUI('err','sem SDK'); return; }
+  try{
+    firebase.initializeApp(FB_CONFIG);
+    const db=firebase.database();
+    fbRef=db.ref(FB_NODE);
+
+    // monitora conexão online/offline
+    db.ref('.info/connected').on('value',snap=>{
+      if(snap.val()===true){
+        setSyncUI('ok','online');
+      } else {
+        setSyncUI('err','offline');
+      }
+    });
+
+    // recebe atualizações dos outros computadores
+    fbRef.on('value', s=>{
+      const v=s.val();
+      if(fbSelfWrite){ fbSelfWrite=false; setSyncUI('ok','online'); return; }
+      if(v && JSON.stringify(v)!==JSON.stringify(DB)){
+        DB=v;
+        localStorage.setItem('rm_almocos',JSON.stringify(DB));
+        ensureMonth(DB.mesAtual);
+        applyTheme();
+        render();
+        toast('🔄 Dados atualizados');
+      }
+      fbReady=true;
+    }, err=>{
+      console.warn('Firebase erro:',err);
+      setSyncUI('err','erro: '+err.code);
+      toast('⚠️ Firebase: '+err.message);
+    });
+  } catch(e){
+    console.warn('Firebase init falhou:',e);
+    setSyncUI('err','falhou');
+  }
+}
+
+function fbSync(){
+  if(!fbRef){ setSyncUI('','local'); return; }
+  fbSelfWrite=true;
+  setSyncUI('syncing','salvando…');
+  fbRef.set(DB)
+    .then(()=>{ setSyncUI('ok','online'); })
+    .catch(e=>{ console.warn('fbSync erro:',e); setSyncUI('err','erro ao salvar'); toast('⚠️ Erro ao salvar no Firebase'); });
+}
+
+/* ============ INIT ============ */
+ensureMonth(DB.mesAtual);
+applyTheme();
+render();
+fbInit();
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
+</script>
+</body>
+</html>
