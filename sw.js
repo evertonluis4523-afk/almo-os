@@ -1,5 +1,5 @@
 /* Almoços RM — service worker (cache app shell, dados ficam no Firebase/localStorage) */
-const CACHE = 'almocos-rm-v1';
+const CACHE = 'almocos-rm-v2';
 const ASSETS = [
   './',
   './index.html',
