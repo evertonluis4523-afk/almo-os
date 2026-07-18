@@ -273,8 +273,21 @@ html[data-fam=light] .theme-chip{background:#fff}
   <h3><span class="dot"></span>Funcionários</h3>
   <div id="empList"></div>
   <button class="addbtn" id="empAdd">+ Adicionar funcionário</button>
+  <button class="btn" id="empImport" style="width:100%;margin-top:8px">🔄 Sincronizar setor/admissão do Recibos</button>
   <p class="note"><b>VALOR</b> (contabilidade) = dias presentes × valor/dia — conta como se tivesse pego, inclusive dias <b>PAGAR</b>; desconta só <b>Falta, INSS, Cárcere e Demissão</b>. <b>A PAGAR</b> = dias <b>PAGAR</b> × valor/dia. Use <b>Outros</b> para situações diversas (pede o motivo, que aparece no relatório).</p>
   <button class="btn primary" id="empClose" style="margin-top:14px;width:100%">Concluir</button>
+</div></div>
+
+<!-- MODAL IMPORT RECIBOS -->
+<div class="modal" id="mImport"><div class="sheet">
+  <h3><span class="dot"></span>Sincronizar com o Recibos</h3>
+  <p class="note" style="margin-bottom:10px">Pareado por nome. Confira antes de aplicar — desmarque quem não deve mudar.</p>
+  <div id="importList"></div>
+  <p id="importUnmatched" class="note"></p>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button class="btn" id="importCancel" style="flex:1">Cancelar</button>
+    <button class="btn primary" id="importApply" style="flex:1">Aplicar selecionados</button>
+  </div>
 </div></div>
 
 <!-- MODAL DAYS -->
@@ -652,6 +665,67 @@ function openEmp(){
 }
 $('#empAdd').onclick=()=>{DB.funcionarios.push({id:'f'+Date.now(),nome:''});save();openEmp()};
 $('#empClose').onclick=()=>{save();closeModal('mEmp');render()};
+
+/* ============ SINCRONIZAÇÃO COM O RECIBOS ============
+   O Recibos publica, num nó separado e de leitura aberta (sem o login
+   dele), só nome/função/data de início de cada funcionário — nada de
+   salário, banco ou documento. Aqui a gente lê esse nó, pareia por nome
+   com quem já está cadastrado aqui, e mostra uma prévia antes de aplicar
+   (nunca sobrescreve silenciosamente). */
+function normName(s){
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+}
+let importPend=[];
+async function importarDeRecibos(){
+  if(!fbEnabled()){ alert('Sincronização com a nuvem está desativada neste sistema.'); return; }
+  if(!window.firebase){ alert('Firebase não carregou — sem internet?'); return; }
+  toast('Buscando funcionários do Recibos…');
+  let snap;
+  try{ snap=await firebase.database().ref('recibos_diretorio').once('value'); }
+  catch(e){ alert('Não consegui acessar o diretório do Recibos: '+((e&&e.message)||e)); return; }
+  const remoto=snap.val();
+  if(!remoto){ alert('Nada encontrado no Recibos ainda. Abra o sistema de Recibos e salve alguma alteração pelo menos uma vez pra ele publicar o diretório.'); return; }
+  const porNome={};
+  Object.values(remoto).forEach(r=>{ const k=normName(r.nome); if(k && !porNome[k]) porNome[k]=r; });
+  importPend=[]; const semMatch=[];
+  DB.funcionarios.forEach(f=>{
+    const r=porNome[normName(f.nome)];
+    if(!r){ semMatch.push(f.nome||'—'); return; }
+    const novoSetor=(r.funcao||'').trim(), novaAdm=(r.dtInicio||'').trim();
+    const mudaSetor=novoSetor && novoSetor!==(f.setor||'');
+    const mudaAdm=novaAdm && novaAdm!==(f.admissao||'');
+    if(mudaSetor||mudaAdm) importPend.push({f,novoSetor,novaAdm,mudaSetor,mudaAdm});
+  });
+  if(!importPend.length){
+    toast(semMatch.length? 'Já sincronizado. '+semMatch.length+' sem correspondência por nome.' : 'Já está tudo sincronizado.');
+    return;
+  }
+  const list=$('#importList'); list.innerHTML=importPend.map((p,i)=>{
+    const partes=[];
+    if(p.mudaSetor) partes.push('Setor: <b>'+esc(p.f.setor||'—')+'</b> → <b>'+esc(p.novoSetor)+'</b>');
+    if(p.mudaAdm) partes.push('Admissão: <b>'+esc(p.f.admissao||'—')+'</b> → <b>'+esc(p.novaAdm)+'</b>');
+    return '<label style="display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px">'+
+      '<input type="checkbox" checked data-idx="'+i+'" style="margin-top:3px">'+
+      '<span><b>'+esc(p.f.nome||'—')+'</b><br><span style="color:var(--muted)">'+partes.join(' · ')+'</span></span></label>';
+  }).join('');
+  $('#importUnmatched').textContent = semMatch.length ? semMatch.length+' funcionário(s) daqui sem correspondência por nome no Recibos: '+semMatch.join(', ') : '';
+  openModal('mImport');
+}
+$('#empImport').onclick=importarDeRecibos;
+$('#importCancel').onclick=()=>closeModal('mImport');
+$('#importApply').onclick=()=>{
+  const idxs=new Set([...$('#importList').querySelectorAll('input:checked')].map(c=>Number(c.dataset.idx)));
+  let n=0;
+  importPend.forEach((p,i)=>{
+    if(!idxs.has(i)) return;
+    if(p.mudaSetor) p.f.setor=p.novoSetor;
+    if(p.mudaAdm) p.f.admissao=p.novaAdm;
+    n++;
+  });
+  importPend=[];
+  save(); closeModal('mImport'); openEmp();
+  toast(n+' funcionário(s) atualizado(s)');
+};
 
 /* ============ DIAS ============ */
 function openDays(){
