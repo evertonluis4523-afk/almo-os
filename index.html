@@ -1440,7 +1440,10 @@ function publicarTotaisMes(){
   const totais={};
   DB.funcionarios.forEach(f=>{
     const r=calc(f);
-    if(r.valor>0) totais[f.id]={nome:f.nome||'',valor:r.valor};
+    // "A pagar" (dias PAGAR × valor/dia) — é o valor que a empresa deve
+    // reembolsar ao funcionário, não o total geral de almoços (que inclui
+    // os dias que a empresa já forneceu direto, sem custo pro funcionário).
+    if(r.aPagar>0) totais[f.id]={nome:f.nome||'',valor:r.aPagar};
   });
   firebase.database().ref('almocos_totais/'+DB.mesAtual).set(totais).catch(()=>{});
 }
