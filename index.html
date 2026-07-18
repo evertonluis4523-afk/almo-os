@@ -1478,9 +1478,15 @@ if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').ca
 function fitGrid(){
   var gridwrap=document.querySelector('.gridwrap'), actions=document.querySelector('.actions');
   if(!gridwrap) return;
-  var top=gridwrap.getBoundingClientRect().top;
+  // getBoundingClientRect().top é relativo à janela visível (muda conforme
+  // a página rola); soma o quanto já rolou pra obter a posição real no
+  // documento, senão o cálculo sai errado se rodar com a página rolada.
+  var top=gridwrap.getBoundingClientRect().top + window.scrollY;
   var actionsH=actions?actions.getBoundingClientRect().height:0;
-  gridwrap.style.maxHeight='calc(100vh - '+Math.ceil(top)+'px - '+Math.ceil(actionsH)+'px)';
+  // 100dvh acompanha a barra de endereço dinâmica do Safari no iPhone
+  // (100vh sozinho não muda quando ela recolhe/aparece, e o cálculo ficaria
+  // desatualizado até o próximo resize).
+  gridwrap.style.maxHeight='calc(100dvh - '+Math.ceil(top)+'px - '+Math.ceil(actionsH)+'px)';
 }
 fitGrid();
 window.addEventListener('resize', fitGrid);
