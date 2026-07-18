@@ -1431,6 +1431,18 @@ function fbSync(){
     tema: DB.tema||null,
     mesAtual: DB.mesAtual,
   });
+  publicarTotaisMes();
+}
+// Publica, num nó separado (fora do "almocos"), o total do mês por
+// funcionário — pra o sistema de Recibos importar no campo "Almoços" da
+// folha de pagamento, sem precisar digitar de novo.
+function publicarTotaisMes(){
+  const totais={};
+  DB.funcionarios.forEach(f=>{
+    const r=calc(f);
+    if(r.valor>0) totais[f.id]={nome:f.nome||'',valor:r.valor};
+  });
+  firebase.database().ref('almocos_totais/'+DB.mesAtual).set(totais).catch(()=>{});
 }
 
 /* ============ INIT ============ */
