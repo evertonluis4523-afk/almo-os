@@ -496,6 +496,7 @@ function render(){
     const wdName=['DOM','SEG','TER','QUA','QUI','SEX','SÁB'][dt.getDay()];
     const th=el('th','daycol'+(M.dias[d].fer?' fer':'')+(d===todayKey()?' today':''));
     th.innerHTML=dd+'<span class="wd">'+wdName+'</span>';
+    th.dataset.date=d;
     th.onclick=()=>paintCol(d);
     htr.appendChild(th);
   });
@@ -1476,10 +1477,23 @@ fbInit();
 // em vez de sempre começar no dia 1 — evita ter que arrastar pra achar a
 // coluna certa toda vez que abre o app no celular.
 (function scrollToToday(){
-  const hoje=document.querySelector('.daycol.today');
   const wrap=document.querySelector('.gridwrap');
   const nomeCol=document.querySelector('.namecell');
-  if(!hoje||!wrap) return;
+  if(!wrap) return;
+  let hoje=document.querySelector('.daycol.today');
+  if(!hoje){
+    // Fim de semana (sábado/domingo não têm coluna, só dia útil): acha o
+    // dia útil mais próximo de hoje em vez de abrir sempre no dia 1 —
+    // prioriza o mais recente pra trás quando a distância empata.
+    const agora=new Date().setHours(0,0,0,0);
+    let melhorDist=Infinity;
+    document.querySelectorAll('.daycol[data-date]').forEach(el=>{
+      const t=new Date(el.dataset.date+'T00:00:00').getTime();
+      const dist=Math.abs(t-agora)-(t<=agora?1:0);
+      if(dist<melhorDist){melhorDist=dist;hoje=el;}
+    });
+  }
+  if(!hoje) return;
   // A coluna de nome fica fixa (sticky) por cima da grade, então o espaço
   // realmente disponível pra centralizar o dia de hoje é o que sobra depois
   // dela — sem isso o cálculo empurra o dia de hoje pra baixo da coluna fixa.
