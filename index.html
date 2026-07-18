@@ -1233,10 +1233,23 @@ function fbInit(){
           return;
         }
       }
-      if(v && JSON.stringify(v)!==JSON.stringify(DB)){
-        DB=migrate(v); localStorage.setItem('rm_almocos',JSON.stringify(DB));
-        applyTheme(); render(); save();
-      }
+      if(!v) return;
+      // Mescla em vez de substituir tudo: preserva meses e campos que este
+      // dispositivo já tinha e que não vieram alterados nesta atualização —
+      // evita que a edição de alguém em outro mês (ou noutro campo) apague
+      // silenciosamente o que você acabou de marcar aqui.
+      const incoming=migrate(v);
+      if(JSON.stringify(incoming)===JSON.stringify(DB)) return;
+      DB.meses={...DB.meses, ...incoming.meses};
+      DB.funcionarios=incoming.funcionarios;
+      DB.valorDia=incoming.valorDia;
+      DB.logo=incoming.logo;
+      DB.tema=incoming.tema;
+      // mesAtual não é adotado do remoto: cada dispositivo mantém o mês que
+      // a pessoa está olhando, sem "pular" de tela por causa de outro usuário.
+      ensureMonth(DB.mesAtual);
+      localStorage.setItem('rm_almocos',JSON.stringify(DB));
+      applyTheme(); render();
     }, err=>{
       console.warn('Firebase erro:',err&&err.code);
       setFbStatus('error');
@@ -1244,7 +1257,21 @@ function fbInit(){
     });
   }catch(e){ console.warn('Firebase off:',e); setFbStatus('error'); }
 }
-function fbSync(){ if(fbRef){ fbSelfWrite=true; fbRef.set(DB); } }
+function fbSync(){
+  if(!fbRef) return;
+  fbSelfWrite=true;
+  // Grava só o mês atual + os campos globais — não o banco inteiro. Assim,
+  // quem estiver editando outro mês ao mesmo tempo não tem o trabalho dele
+  // apagado por esta gravação (e vice-versa).
+  fbRef.update({
+    ['meses/'+DB.mesAtual]: DB.meses[DB.mesAtual]||null,
+    funcionarios: DB.funcionarios||[],
+    valorDia: DB.valorDia,
+    logo: DB.logo||null,
+    tema: DB.tema||null,
+    mesAtual: DB.mesAtual,
+  });
+}
 
 /* ============ INIT ============ */
 ensureMonth(DB.mesAtual);
