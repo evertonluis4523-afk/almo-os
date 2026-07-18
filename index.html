@@ -572,14 +572,23 @@ function renderBrush(){
   });
 }
 function paintRow(f){
-  const M=curMonth(); const marc=M.marc[f.id]||(M.marc[f.id]={});
+  const M=curMonth();
+  const dias=activeDays().filter(d=>!M.dias[d].fer).length;
+  if(!confirm('Pintar TODO o mês de "'+(f.nome||'—')+'" ('+dias+' dia(s)) como "'+MK[brush].lbl+'"?\n\nIsso substitui qualquer marcação existente nesses dias.')) return;
+  const marc=M.marc[f.id]||(M.marc[f.id]={});
   activeDays().forEach(d=>{ if(!(M.dias[d].fer)){ if(brush){marc[d]=brush;}else{delete marc[d];} if(brush!=='OUTROS'&&M.obs[f.id]) delete M.obs[f.id][d]; } });
   save(); render(); toast('Linha pintada: '+(MK[brush].lbl));
 }
 function paintCol(d){
   const M=curMonth();
-  if(brush==='FERIADO'){ M.dias[d].fer=true; }
-  else { DB.funcionarios.forEach(f=>{const marc=M.marc[f.id]||(M.marc[f.id]={}); if(brush){marc[d]=brush;}else{delete marc[d];} if(brush!=='OUTROS'&&M.obs[f.id]) delete M.obs[f.id][d];}); }
+  if(brush==='FERIADO'){
+    if(!confirm('Marcar o dia '+d.slice(-2)+' como feriado para o mês todo?')) return;
+    M.dias[d].fer=true;
+  }
+  else {
+    if(!confirm('Pintar o dia '+d.slice(-2)+' para TODOS os '+DB.funcionarios.length+' funcionário(s) como "'+MK[brush].lbl+'"?\n\nIsso substitui qualquer marcação existente nesse dia.')) return;
+    DB.funcionarios.forEach(f=>{const marc=M.marc[f.id]||(M.marc[f.id]={}); if(brush){marc[d]=brush;}else{delete marc[d];} if(brush!=='OUTROS'&&M.obs[f.id]) delete M.obs[f.id][d];});
+  }
   save(); render(); toast('Coluna '+d.slice(-2)+': '+MK[brush].lbl);
 }
 
