@@ -204,6 +204,19 @@ html[data-fam=light] .theme-chip{background:#fff}
   transition:.25s;pointer-events:none;font-size:13px;display:flex;align-items:center;gap:10px}
 .toast.show{opacity:1;pointer-events:auto}
 .toast-undo{text-decoration:underline;cursor:pointer;font-weight:800;letter-spacing:.3px;flex:0 0 auto}
+
+/* TELA ESTREITA (celular) — os campos de Mês/Valor/Dias ficam numa linha
+   compacta, e Buscar/Setor ganham linha própria em vez de quebrar de
+   forma imprevisível. A altura real da grade é recalculada por JS
+   (fitGrid), então o valor de max-height aqui é só um fallback inicial. */
+@media (max-width:640px){
+  .controls{gap:6px}
+  .field-search{flex:1 1 100% !important;order:4}
+  .field-setor{flex:1 1 100%;order:5}
+  .field-setor select{width:100%}
+  .appbar-in{gap:6px}
+  .ico-btn{width:40px;height:40px}
+}
 </style>
 </head>
 <body>
@@ -222,8 +235,8 @@ html[data-fam=light] .theme-chip{background:#fff}
   <div class="field"><label>Mês</label><input type="month" id="mes"></div>
   <div class="field"><label>Valor/dia (R$)</label><input class="vd mono" id="valorDia" type="number" inputmode="decimal" step="0.5" value="20"></div>
   <div class="field"><label>Dias úteis</label><input class="vd mono" id="diasUteis" type="number" readonly></div>
-  <div class="field" style="flex:1;min-width:160px"><label>Buscar (nome / setor)</label><input id="search" class="ctrl-input" type="search" placeholder="digite para filtrar…"></div>
-  <div class="field"><label>Setor</label><select id="setorFilter" class="ctrl-input"><option value="">Todos</option></select></div>
+  <div class="field field-search" style="flex:1;min-width:160px"><label>Buscar (nome / setor)</label><input id="search" class="ctrl-input" type="search" placeholder="digite para filtrar…"></div>
+  <div class="field field-setor"><label>Setor</label><select id="setorFilter" class="ctrl-input"><option value="">Todos</option></select></div>
   <div class="spacer"></div>
   <button class="ico-btn" id="btnBatch" title="Marcação em lote"><span>⚡</span><span class="ib-lbl">Lote</span></button>
   <button class="ico-btn" id="btnDays" title="Editar dias"><span>📅</span><span class="ib-lbl">Dias</span></button>
@@ -1454,6 +1467,26 @@ applyTheme();
 render();
 fbInit();
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
+
+// A altura da grade (.gridwrap) usava um número fixo (100vh - 344px) que
+// assume o cabeçalho (appbar + controles + resumo + brushbar) numa única
+// linha. Em telas estreitas os campos de Mês/Valor/Dias/Buscar/Setor
+// quebram em 2-3 linhas, o cabeçalho fica mais alto que o previsto, e a
+// barra de ações (Funcionários / Relatório) — fixa no rodapé da página —
+// acaba sobrepondo linhas da tabela porque sobra espaço não contabilizado.
+// Recalcula com a altura real, medida em tela.
+function fitGrid(){
+  var gridwrap=document.querySelector('.gridwrap'), actions=document.querySelector('.actions');
+  if(!gridwrap) return;
+  var top=gridwrap.getBoundingClientRect().top;
+  var actionsH=actions?actions.getBoundingClientRect().height:0;
+  gridwrap.style.maxHeight='calc(100vh - '+Math.ceil(top)+'px - '+Math.ceil(actionsH)+'px)';
+}
+fitGrid();
+window.addEventListener('resize', fitGrid);
+if(window.visualViewport) window.visualViewport.addEventListener('resize', fitGrid);
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitGrid);
+setTimeout(fitGrid, 300);
 </script>
 <!-- Ajuste de tela (mobile) -->
 <script>
