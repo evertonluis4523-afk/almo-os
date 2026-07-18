@@ -201,8 +201,9 @@ table.rep tr.tot td{background:var(--surface2);font-weight:800;border-top:2px so
 html[data-fam=light] .theme-chip{background:#fff}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent);
   color:#fff;padding:11px 18px;border-radius:30px;font-weight:700;z-index:90;opacity:0;
-  transition:.25s;pointer-events:none;font-size:13px}
-.toast.show{opacity:1}
+  transition:.25s;pointer-events:none;font-size:13px;display:flex;align-items:center;gap:10px}
+.toast.show{opacity:1;pointer-events:auto}
+.toast-undo{text-decoration:underline;cursor:pointer;font-weight:800;letter-spacing:.3px;flex:0 0 auto}
 </style>
 </head>
 <body>
@@ -957,7 +958,17 @@ function closeModal(id){$('#'+id).classList.remove('open')}
 document.querySelectorAll('.modal').forEach(m=>m.onclick=e=>{if(e.target===m)m.classList.remove('open')});
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function fmtMes(mk){const[,y,m]=[0,...mk.split('-')];const n=['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];return n[Number(m)]+'/'+y}
-let tmo; function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(tmo);tmo=setTimeout(()=>e.classList.remove('show'),1600)}
+let tmo;
+function toast(t,undoFn){
+  const e=$('#toast'); e.innerHTML=''; e.appendChild(document.createTextNode(t));
+  if(undoFn){
+    const b=el('span','toast-undo'); b.textContent='DESFAZER';
+    b.onclick=ev=>{ ev.stopPropagation(); clearTimeout(tmo); e.classList.remove('show'); undoFn(); };
+    e.appendChild(b);
+  }
+  e.classList.add('show'); clearTimeout(tmo);
+  tmo=setTimeout(()=>e.classList.remove('show'), undoFn?6000:1600);
+}
 
 $('#mes').onchange=e=>{DB.mesAtual=e.target.value;ensureMonth(DB.mesAtual);save();render()};
 $('#valorDia').onchange=e=>{DB.valorDia=Number(e.target.value)||0;save();render()};
@@ -1029,6 +1040,11 @@ $('#batchApply').onclick=()=>{
   } else {
     targets=DB.funcionarios.filter(f=>!isAfastado(f));
   }
+  // snapshot do mês antes de aplicar, pra permitir desfazer
+  lastBatch={ mes:DB.mesAtual,
+    dias:JSON.parse(JSON.stringify(M.dias)),
+    marc:JSON.parse(JSON.stringify(M.marc)),
+    obs:JSON.parse(JSON.stringify(M.obs)) };
   if(mk==='FERIADO'){
     days.forEach(d=>{ M.dias[d].fer=true; });
   } else {
@@ -1038,8 +1054,17 @@ $('#batchApply').onclick=()=>{
     });
   }
   save(); render(); closeModal('mBatch');
-  toast('Aplicado: '+MK[mk].lbl+' em '+days.length+' dia(s)');
+  toast('Aplicado: '+MK[mk].lbl+' em '+days.length+' dia(s)', undoLastBatch);
 };
+let lastBatch=null;
+function undoLastBatch(){
+  if(!lastBatch) return;
+  const M=ensureMonth(lastBatch.mes);
+  M.dias=lastBatch.dias; M.marc=lastBatch.marc; M.obs=lastBatch.obs;
+  lastBatch=null;
+  save(); render();
+  toast('Marcação em lote desfeita');
+}
 $('#btnBatch').onclick=openBatch;
 
 /* ---------- Atalhos de teclado ---------- */
