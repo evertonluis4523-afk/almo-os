@@ -529,6 +529,12 @@ function render(){
   const tp=el('td','calc'); tp.textContent='R$ '+money(tP);
   ftr.appendChild(tv); ftr.appendChild(tp);
   tf.appendChild(ftr); t.appendChild(tf);
+  // Os cartões "Custo do mês"/"A pagar" só eram atualizados por
+  // updateRowCalc() (ao marcar uma célula na sessão atual) — ao reabrir o
+  // app ou trocar de mês, ficavam travados em "R$ 0" mesmo com dias já
+  // marcados, porque render() nunca escrevia neles.
+  const sv=$('#sumValor'); if(sv) sv.textContent='R$ '+money(tV);
+  const sp=$('#sumPagar'); if(sp) sp.textContent='R$ '+money(tP);
 }
 function thHead(txt,cls){const th=el('th',cls);th.textContent=txt;return th}
 function isAfastado(f){
