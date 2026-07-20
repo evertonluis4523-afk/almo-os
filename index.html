@@ -225,9 +225,49 @@ html[data-fam=light] .theme-chip{background:#fff}
   .appbar-in{gap:6px}
   .ico-btn{width:40px;height:40px}
 }
+
+/* LOGIN */
+.login{position:fixed;inset:0;z-index:90;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+.login.hide{display:none}
+.login-card{position:relative;width:100%;max-width:380px;background:var(--surface);border-radius:var(--r);overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5);border-top:4px solid var(--accent)}
+.login-card .lc-head{padding:30px 30px 22px;text-align:center;border-bottom:1px solid var(--line)}
+.login-card .lc-head img{height:52px;margin-bottom:14px;display:inline-block}
+.login-card .lc-head .ttl{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:800}
+.login-card .lc-head .sub{font-size:12px;color:var(--muted);margin-top:4px}
+.login-card .lc-body{padding:26px 30px 30px}
+.login-card .lc-body .field{margin-bottom:14px}
+.login-card .lc-body .field input{width:100%}
+.login-card .lc-body .btn{width:100%;justify-content:center}
+.login-err{display:none;background:rgba(170,34,31,.18);color:#ff8a87;border:1px solid rgba(170,34,31,.4);border-radius:9px;padding:10px 12px;font-size:12.5px;font-weight:600;margin-bottom:14px}
+.login-err.on{display:block}
+html[data-fam=light] .login-err{background:#fbe2e1;color:#a3211d;border-color:#f3c9c8}
+.login-mode{margin-top:16px;text-align:center;font-size:11px;color:var(--muted)}
 </style>
 </head>
 <body>
+
+<div class="login" id="loginScreen">
+  <div class="login-card">
+    <div class="lc-head">
+      <img id="loginLogo" alt="RM Estruturas">
+      <div class="ttl">Controle de Almoços</div>
+      <div class="sub">Acesso restrito · entre com seu e-mail e senha</div>
+    </div>
+    <div class="lc-body">
+      <div class="login-err" id="loginErr"></div>
+      <div class="field">
+        <label>E-mail</label>
+        <input id="liEmail" type="email" autocomplete="username" placeholder="voce@empresa.com" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input id="liPass" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn primary" id="loginBtn" onclick="doLogin()">Entrar</button>
+      <div class="login-mode" id="loginMode"></div>
+    </div>
+  </div>
+</div>
 
 <div class="appbar"><div class="appbar-in">
   <div class="brand"><img id="appbarLogo" class="rm-logo" alt="RM Estruturas">ALMOÇOS<small>RM</small></div>
@@ -237,6 +277,7 @@ html[data-fam=light] .theme-chip{background:#fff}
   <button class="ico-btn" id="btnRep" title="Relatório"><span>▤</span><span class="ib-lbl">Relatório</span></button>
   <button class="ico-btn" id="btnTheme" title="Modo claro/escuro"><span>◐</span><span class="ib-lbl">Tema</span></button>
   <button class="ico-btn" id="btnCfg" title="Configurações"><span>⚙</span><span class="ib-lbl">Config</span></button>
+  <button class="ico-btn" id="btnLogout" title="Sair" style="display:none"><span>⏻</span><span class="ib-lbl">Sair</span></button>
 </div></div>
 
 <div class="controls">
@@ -361,6 +402,7 @@ html[data-fam=light] .theme-chip{background:#fff}
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
 /* ============ MODELO ============ */
@@ -724,6 +766,7 @@ let importPend=[];
 async function importarDeRecibos(){
   if(!fbEnabled()){ alert('Sincronização com a nuvem está desativada neste sistema.'); return; }
   if(!window.firebase){ alert('Firebase não carregou — sem internet?'); return; }
+  if(!fbAuthed){ alert('Faça login para acessar os dados do Recibos.'); return; }
   toast('Buscando funcionários do Recibos…');
   let snap;
   try{ snap=await firebase.database().ref('recibos_diretorio').once('value'); }
@@ -1400,6 +1443,47 @@ const FB_CONFIG={
 };
 const FB_NODE='almocos';            // nó dedicado dentro do rm-contas
 let fbRef=null, fbReady=false, fbSelfWrite=false, fbFirst=true, fbState='local';
+let fbAuthed=false;                 // true só depois que o Firebase confirma um login válido
+
+/* ============ AUTENTICAÇÃO ============
+   Enquanto não houver um usuário logado, NENHUMA leitura ou escrita no
+   Firebase acontece (nem o nó "almocos", nem o "recibos_diretorio"). As
+   contas em si (quais e-mails podem entrar) são controladas só pelas regras
+   do Firebase, cadastradas no console — este app não sabe nem guarda essa
+   lista, só exige "algum" login válido. */
+function showLogin(show){
+  const el=document.getElementById('loginScreen');
+  if(el) el.classList.toggle('hide', !show);
+  const lo=document.getElementById('btnLogout');
+  if(lo) lo.style.display = show ? 'none' : (fbEnabled() ? '' : 'none');
+}
+function doLogin(){
+  const email=(document.getElementById('liEmail').value||'').trim();
+  const pass=document.getElementById('liPass').value||'';
+  const err=document.getElementById('loginErr');
+  err.classList.remove('on');
+  if(!fbEnabled() || !window.firebase){ err.textContent='Firebase não carregou — sem internet?'; err.classList.add('on'); return; }
+  const btn=document.getElementById('loginBtn');
+  btn.disabled=true;
+  firebase.auth().signInWithEmailAndPassword(email,pass)
+    .then(()=>{ err.classList.remove('on'); })
+    .catch(e=>{ err.textContent=authMsg(e&&e.code); err.classList.add('on'); })
+    .finally(()=>{ btn.disabled=false; });
+}
+function doLogout(){
+  if(fbEnabled() && window.firebase) firebase.auth().signOut();
+}
+function authMsg(code){
+  const m={
+    'auth/invalid-email':'E-mail inválido.',
+    'auth/user-not-found':'Usuário não encontrado.',
+    'auth/wrong-password':'Senha incorreta.',
+    'auth/invalid-credential':'E-mail ou senha incorretos.',
+    'auth/too-many-requests':'Muitas tentativas. Aguarde um momento.',
+    'auth/network-request-failed':'Sem conexão.'
+  };
+  return m[code]||'Não foi possível entrar. Tente novamente.';
+}
 
 function setFbStatus(state){
   fbState=state;
@@ -1421,11 +1505,30 @@ function hasLocalData(){
 }
 function fbEnabled(){ return FB_CONFIG.apiKey && FB_CONFIG.apiKey.indexOf('COLE_AQUI')<0; }
 function fbInit(){
-  if(!fbEnabled()){ setFbStatus('local'); return; }
+  if(!fbEnabled()){ setFbStatus('local'); showLogin(false); return; } // sem nuvem configurada: roda 100% local, sem exigir login
   if(!window.firebase){ setFbStatus('error'); console.warn('SDK Firebase não carregou'); return; }
-  setFbStatus('connecting');
   try{
     firebase.initializeApp(FB_CONFIG);
+  }catch(e){ console.warn('Firebase off:',e); setFbStatus('error'); return; }
+  document.getElementById('loginLogo').src=logoData();
+  try{
+    firebase.auth().onAuthStateChanged(user=>{
+      if(user){
+        fbAuthed=true;
+        showLogin(false);
+        startCloudSync();
+      }else{
+        fbAuthed=false;
+        fbRef=null; fbReady=false; fbFirst=true;
+        setFbStatus('local');
+        showLogin(true);
+      }
+    });
+  }catch(e){ console.warn('Firebase Auth off:',e); setFbStatus('error'); }
+}
+function startCloudSync(){
+  setFbStatus('connecting');
+  try{
     fbRef=firebase.database().ref(FB_NODE);
     fbRef.on('value',s=>{
       const v=s.val();
@@ -1499,6 +1602,7 @@ ensureMonth(DB.mesAtual);
 applyTheme();
 render();
 document.getElementById('appbarLogo').src = logoData();
+document.getElementById('btnLogout').onclick=doLogout;
 fbInit();
 
 // Ao abrir o mês corrente, rola a grade horizontalmente até o dia de hoje
