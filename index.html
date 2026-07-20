@@ -52,13 +52,13 @@ html,body{margin:0;background:var(--bg);color:var(--txt);padding-top:10px;
 button{font-family:inherit;cursor:pointer;border:none;color:inherit}
 
 /* APPBAR */
-.appbar{position:sticky;top:0;z-index:40;background:var(--surface2);color:#e8eaed;
-  border-bottom:1px solid var(--line);padding:env(safe-area-inset-top) 14px 0;
-  border-radius:14px 14px 0 0;box-shadow:0 2px 10px rgba(0,0,0,.18);margin:0 6px}
+.appbar{position:sticky;top:0;z-index:40;background:#fff;color:#16171a;
+  border-bottom:1px solid #e6e6e1;padding:env(safe-area-inset-top) 14px 0;
+  border-radius:14px 14px 0 0;box-shadow:0 1px 3px rgba(20,20,20,.06);margin:0 6px}
 .appbar-in{display:flex;align-items:center;gap:8px;height:62px}
 .brand{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.3px}
-.brand .dot{width:10px;height:10px;border-radius:3px;background:var(--accent)}
-.brand small{font-weight:600;color:#9aa0a6;letter-spacing:1px;font-size:11px}
+.brand .rm-logo{height:24px;width:auto;display:block}
+.brand small{font-weight:600;color:#6e7178;letter-spacing:1px;font-size:11px}
 .spacer{flex:1}
 .ico-btn{width:44px;height:44px;border-radius:10px;background:#23282e;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
@@ -67,6 +67,8 @@ button{font-family:inherit;cursor:pointer;border:none;color:inherit}
   text-transform:uppercase}
 .ico-btn:active{background:var(--accent)}
 .ico-btn:active .ib-lbl{color:#fff}
+.appbar .ico-btn{background:#f5f6f7;border-color:#e6e6e1;color:#16171a}
+.appbar .ico-btn .ib-lbl{color:#6e7178}
 
 /* CONTROL ROW */
 .controls{display:flex;gap:8px;align-items:center;padding:12px 14px;flex-wrap:wrap;
@@ -228,9 +230,9 @@ html[data-fam=light] .theme-chip{background:#fff}
 <body>
 
 <div class="appbar"><div class="appbar-in">
-  <div class="brand"><span class="dot"></span>ALMOÇOS<small>RM</small></div>
+  <div class="brand"><img id="appbarLogo" class="rm-logo" alt="RM Estruturas">ALMOÇOS<small>RM</small></div>
   <div class="spacer"></div>
-  <span id="fbStat" title="Nuvem" style="display:flex;align-items:center;gap:5px;font-size:11px;color:#9aa0a6;margin-right:4px"><span id="fbDot" style="width:9px;height:9px;border-radius:50%;background:#9aa0a6;display:inline-block"></span><span id="fbTxt">local</span></span>
+  <span id="fbStat" title="Nuvem" style="display:flex;align-items:center;gap:5px;font-size:11px;color:#6e7178;margin-right:4px"><span id="fbDot" style="width:9px;height:9px;border-radius:50%;background:#9aa0a6;display:inline-block"></span><span id="fbTxt">local</span></span>
   <button class="ico-btn" id="btnEmp" title="Funcionários"><span>☰</span><span class="ib-lbl">Equipe</span></button>
   <button class="ico-btn" id="btnRep" title="Relatório"><span>▤</span><span class="ib-lbl">Relatório</span></button>
   <button class="ico-btn" id="btnTheme" title="Modo claro/escuro"><span>◐</span><span class="ib-lbl">Tema</span></button>
@@ -1378,7 +1380,7 @@ $('#cfgLogo').onclick=()=>$('#cfgLogoFile').click();
 $('#cfgLogoFile').onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
   const rd=new FileReader();
-  rd.onload=()=>{ DB.logo=rd.result; save(); toast('Logo atualizada'); e.target.value=''; };
+  rd.onload=()=>{ DB.logo=rd.result; save(); document.getElementById('appbarLogo').src=logoData(); toast('Logo atualizada'); e.target.value=''; };
   rd.readAsDataURL(f);
 };
 
@@ -1453,6 +1455,7 @@ function fbInit(){
       ensureMonth(DB.mesAtual);
       localStorage.setItem('rm_almocos',JSON.stringify(DB));
       applyTheme(); render();
+      document.getElementById('appbarLogo').src=logoData();
     }, err=>{
       console.warn('Firebase erro:',err&&err.code);
       setFbStatus('error');
@@ -1495,6 +1498,7 @@ function publicarTotaisMes(){
 ensureMonth(DB.mesAtual);
 applyTheme();
 render();
+document.getElementById('appbarLogo').src = logoData();
 fbInit();
 
 // Ao abrir o mês corrente, rola a grade horizontalmente até o dia de hoje
