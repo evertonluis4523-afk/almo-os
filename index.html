@@ -1529,7 +1529,10 @@ fbInit();
   const areaVisivel=wrap.clientWidth-nomeW;
   wrap.scrollLeft=Math.max(0, hoje.offsetLeft - nomeW - areaVisivel/2 + hoje.offsetWidth/2);
 })();
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
+if('serviceWorker' in navigator){
+  if(location.protocol.startsWith('http')){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
+  else { navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{}); }
+}
 
 // A altura da grade (.gridwrap) usava um número fixo (100vh - 344px) que
 // assume o cabeçalho (appbar + controles + resumo + brushbar) numa única
